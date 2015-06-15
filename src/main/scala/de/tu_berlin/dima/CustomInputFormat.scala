@@ -2,8 +2,6 @@ package de.tu_berlin.dima
 
 import java.nio.charset.Charset
 
-import org.apache.flink.api.common.io.DelimitedInputFormat
-
 /**
  * Created by oliver on 13.06.15.
  */

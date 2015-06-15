@@ -1,8 +1,7 @@
 package de.tu_berlin.dima
 
-import org.apache.spark.SparkContext
+import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.rdd.RDD
-
 
 /**
  * Created by oliver on 13.06.15.
@@ -28,8 +27,10 @@ object PreProcessing {
   def preProcess(genrePath: String, synopsisPath: String, sc: SparkContext):
   (RDD[MovieSynopsis], RDD[MovieSynopsis]) = {
     //TODO read file with different line delim
+
+    val conf = new SparkConf().set("textinputformat.record.delimiter", synopsis_line_delim)
     // read files and transform to appropriate RDDs
-    val movieSet = extractMovieInfo(sc.textFile(genrePath))//, "iso-8859-1"))
+    val movieSet = extractMovieInfo(sc.newAPIHadoopFile(genrePath, ))//, "iso-8859-1"))
     val synopsisSet = extractSynopsisInfo(
       sc.textFile(synopsisPath)//readFile(new CustomInputFormat("iso-8859-1", synopsis_line_delim), synopsisPath)
     )
@@ -47,13 +48,16 @@ object PreProcessing {
 
   def joinSets(movieSet: RDD[Movie], synopsisSet: RDD[Synopsis]): RDD[MovieSynopsis] = {
 
-    //TODO transform to (k,v) pairs so spark can do a join
     movieSet
-      .join(synopsisSet)
-      .where(m => (m.title, m.year)).equalTo(s => (s.title, s.year))
-      .apply(
-        (mov, syn) => MovieSynopsis(mov.title, mov.year, mov.genre, syn.synopsis)
-      )//.withForwardedFields("f0.title->f0; f0.year->f1; f0.genre->f2; f1.synopsis->f3")
+      .map(m => ((m.title, m.year), m))
+      .join(
+        synopsisSet.map(s => ((s.title, s.year), s))
+      )
+      .map(ms => {
+        val title = ms._1._1
+        val year = ms._1._2
+        MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
+      })
   }
 
   def extractMovieInfo(lines: RDD[String]): RDD[Movie] = {
