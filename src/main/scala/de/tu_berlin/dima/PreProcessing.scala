@@ -38,7 +38,20 @@ object PreProcessing {
     // join RDDs in order to keep only movies that have a synopsis
     val movieSynopsis = joinSets(movieSet, synopsisSet)
 
+    val movieSets = movieSynopsis
+      .groupBy((ms : MovieSynopsis) => ms.genre)
+      .map(msByGenre => {
+      val size = msByGenre._2.size
+      val trainingSet = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
+      val testSet = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
+
+      Seq(msByGenre._1, trainingSet, testSet)
+    })
+
     // create training set by keeping TRAINING_FRACTION of movies for each genre
+    val testSet = movieSets.foreach(genreSets => {
+      
+    })
 
     // create test set by keeping 1-TRAINING_FRACTION of movies for each genre
 
