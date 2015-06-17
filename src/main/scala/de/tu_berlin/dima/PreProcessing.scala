@@ -30,7 +30,7 @@ object PreProcessing {
 
     val conf = new SparkConf().set("textinputformat.record.delimiter", synopsis_line_delim)
     // read files and transform to appropriate RDDs
-    val movieSet = extractMovieInfo(sc.newAPIHadoopFile(genrePath, ))//, "iso-8859-1"))
+    val movieSet = extractMovieInfo(sc.newAPIHadoopRDD(genrePath))//, "iso-8859-1"))
     val synopsisSet = extractSynopsisInfo(
       sc.textFile(synopsisPath)//readFile(new CustomInputFormat("iso-8859-1", synopsis_line_delim), synopsisPath)
     )
@@ -38,25 +38,31 @@ object PreProcessing {
     // join RDDs in order to keep only movies that have a synopsis
     val movieSynopsis = joinSets(movieSet, synopsisSet)
 
-    val movieSets = movieSynopsis
+    val movieSets : RDD[(String, Seq[MovieSynopsis], Seq[MovieSynopsis])]=
+      movieSynopsis
       .groupBy((ms : MovieSynopsis) => ms.genre)
       .map(msByGenre => {
       val size = msByGenre._2.size
-      val trainingSet = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
-      val testSet = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
+      val trainingSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
+      val testSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
 
-      Seq(msByGenre._1, trainingSet, testSet)
+      (msByGenre._1, trainingSet, testSet)
     })
 
     // create training set by keeping TRAINING_FRACTION of movies for each genre
-    val testSet = movieSets.foreach(genreSets => {
-      
+    var trainingSet : Seq[MovieSynopsis]= null
+    movieSets.foreach(genreSets => {
+      trainingSet.++(genreSets._2)
     })
 
     // create test set by keeping 1-TRAINING_FRACTION of movies for each genre
+    var testSet : Seq[MovieSynopsis]= null
+    movieSets.foreach(genreSets => {
+      testSet.++(genreSets._3)
+    })
 
     // return (trainingSet, testSet)
-    (movieSynopsis, movieSynopsis)
+    (sc.parallelize(trainingSet), sc.parallelize(testSet))
   }
 
   def joinSets(movieSet: RDD[Movie], synopsisSet: RDD[Synopsis]): RDD[MovieSynopsis] = {
