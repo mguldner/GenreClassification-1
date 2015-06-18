@@ -62,7 +62,7 @@ object PreProcessing {
     })
 
     // return (trainingSet, testSet)
-    (sc.parallelize(trainingSet), sc.parallelize(testSet))
+    (sc.parallelize(trainingSet), sc.parallelize(testSet) )
   }
 
   def joinSets(movieSet: RDD[Movie], synopsisSet: RDD[Synopsis]): RDD[MovieSynopsis] = {
