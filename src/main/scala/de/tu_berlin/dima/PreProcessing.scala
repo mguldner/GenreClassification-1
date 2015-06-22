@@ -32,22 +32,22 @@ object PreProcessing {
     // read files and transform to appropriate RDDs
     val movieSet = extractMovieInfo(sc.newAPIHadoopRDD(genrePath))//, "iso-8859-1"))
     val synopsisSet = extractSynopsisInfo(
-      sc.textFile(synopsisPath)//readFile(new CustomInputFormat("iso-8859-1", synopsis_line_delim), synopsisPath)
-    )
+        sc.textFile(synopsisPath)//readFile(new CustomInputFormat("iso-8859-1", synopsis_line_delim), synopsisPath)
+      )
 
     // join RDDs in order to keep only movies that have a synopsis
-    val movieSynopsis = joinSets(movieSet, synopsisSet)
+    val movieSynopsis: RDD[MovieSynopsis] = joinSets(movieSet, synopsisSet)
 
     val movieSets : RDD[(String, Seq[MovieSynopsis], Seq[MovieSynopsis])]=
       movieSynopsis
-      .groupBy((ms : MovieSynopsis) => ms.genre)
-      .map(msByGenre => {
-      val size = msByGenre._2.size
-      val trainingSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
-      val testSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
+        .groupBy((ms : MovieSynopsis) => ms.genre)
+        .map(msByGenre => {
+        val size = msByGenre._2.size
+        val trainingSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
+        val testSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
 
-      (msByGenre._1, trainingSet, testSet)
-    })
+        (msByGenre._1, trainingSet, testSet)
+      })
 
     // create training set by keeping TRAINING_FRACTION of movies for each genre
     var trainingSet : Seq[MovieSynopsis]= null
@@ -73,10 +73,10 @@ object PreProcessing {
         synopsisSet.map(s => ((s.title, s.year), s))
       )
       .map(ms => {
-        val title = ms._1._1
-        val year = ms._1._2
-        MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
-      })
+      val title = ms._1._1
+      val year = ms._1._2
+      MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
+    })
   }
 
   def extractMovieInfo(lines: RDD[String]): RDD[Movie] = {

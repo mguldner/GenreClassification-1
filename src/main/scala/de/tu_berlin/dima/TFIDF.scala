@@ -12,7 +12,7 @@ object TFIDF {
 
   def apply(trainingSet: RDD[MovieSynopsis]): RDD[Vector] = {
 
-    val documents : RDD[Seq[String]] = trainingSet.map(_.synopsis.split(" ").toSeq)
+    val documents : RDD[Seq[String]] = trainingSet.map{_.synopsis.toLowerCase().split("\\W+").toSeq filter(_.nonEmpty)}
 
     val hashingTF = new HashingTF()
     val tf: RDD[Vector] = hashingTF.transform(documents)
