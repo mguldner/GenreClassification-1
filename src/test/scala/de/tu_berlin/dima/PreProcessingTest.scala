@@ -1,8 +1,9 @@
 package de.tu_berlin.dima
 
 
+import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkContext, SparkConf}
-import org.junit.{After, Before, Test}
+import org.junit.{Ignore, After, Before, Test}
 
 import scala.reflect.io.File
 
@@ -16,6 +17,17 @@ class PreProcessingTest {
   val genrePath = "genres.list"
   val synopsisPath = "plot.list"
   val tempDirProp = "java.io.tmpDir"
+
+  @Ignore
+  @Test
+  def run(): Unit = {
+    PreProcessingMain.main(
+      Array(
+        "file:///home/oliver/Documents/datasets/imdb/moviedb-3.8/lists/genres.list",
+        "file:///home/oliver/Documents/datasets/imdb/moviedb-3.8/lists/plot_sample.list"
+      )
+    )
+  }
 
 
   @Before
@@ -62,12 +74,14 @@ class PreProcessingTest {
     assert(!File(genrePath).exists)
   }
 
+  //TODO
   @Test
   def testParsing(): Unit = {
-    val parsedGenres = PreProcessing.extractMovieInfo(env.readTextFile(genrePath, "iso-8859-1")).collect()
-    val parsedSynopses = PreProcessing.extractSynopsisInfo(
-      sc.readFile(new CustomInputFormat("iso-8859-1", PreProcessing.synopsis_line_delim), synopsisPath)
-    ).collect()
+    val inputConf = new Configuration()
+    inputConf.set("textinputformat.record.delimiter", PreProcessing.synopsis_line_delim)
+
+    val parsedGenres = PreProcessing.extractMovieInfo(genrePath, sc).collect()
+    val parsedSynopses = PreProcessing.extractSynopsisInfo(synopsisPath, sc, inputConf).collect()
 
     // assert correct genres
     assert(parsedGenres.contains(Movie("la seule sortie", 2010, "animation")))

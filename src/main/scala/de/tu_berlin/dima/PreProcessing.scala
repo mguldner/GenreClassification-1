@@ -1,6 +1,9 @@
 package de.tu_berlin.dima
 
-import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.hadoop.conf.Configuration
+import org.apache.hadoop.io.{Text, LongWritable}
+import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+import org.apache.spark.{SparkContext}
 import org.apache.spark.rdd.RDD
 
 /**
@@ -28,12 +31,12 @@ object PreProcessing {
   (RDD[MovieSynopsis], RDD[MovieSynopsis]) = {
     //TODO read file with different line delim
 
-    val conf = new SparkConf().set("textinputformat.record.delimiter", synopsis_line_delim)
+    val inputConf = new Configuration()
+    inputConf.set("textinputformat.record.delimiter", synopsis_line_delim)
     // read files and transform to appropriate RDDs
-    val movieSet = extractMovieInfo(sc.newAPIHadoopFile(genrePath, ))//, "iso-8859-1"))
-    val synopsisSet = extractSynopsisInfo(
-      sc.textFile(synopsisPath)//readFile(new CustomInputFormat("iso-8859-1", synopsis_line_delim), synopsisPath)
-    )
+    //TODO
+    val movieSet = extractMovieInfo(genrePath, sc)//, "iso-8859-1"))
+    val synopsisSet = extractSynopsisInfo(synopsisPath, sc, inputConf)
 
     // join RDDs in order to keep only movies that have a synopsis
     val movieSynopsis = joinSets(movieSet, synopsisSet)
@@ -60,17 +63,24 @@ object PreProcessing {
       })
   }
 
-  def extractMovieInfo(lines: RDD[String]): RDD[Movie] = {
-    lines
+  def extractMovieInfo(path: String, sc: SparkContext): RDD[Movie] = {
+    sc.textFile(path)
       .flatMap(line => genre_pattern.unapplySeq(line) match {
       case None => Seq.empty[Movie]
       case Some(m) => Seq(new Movie(m(0).toLowerCase.trim, m(1).toInt, m(2).toLowerCase.trim))
     })
   }
 
-  def extractSynopsisInfo(lines: RDD[String]): RDD[Synopsis] = {
-    lines
-      .flatMap(line => lineToSynopsis(line))
+  def extractSynopsisInfo(path: String, sc: SparkContext, cfg: Configuration): RDD[Synopsis] = {
+    sc.newAPIHadoopFile(
+      path,
+      classOf[TextInputFormat],
+      classOf[LongWritable],
+      classOf[Text],
+      cfg
+    )// ,"iso-8859-1")
+    .map(t => t._2.toString)
+    .flatMap(line => lineToSynopsis(line))
   }
 
   def lineToSynopsis(line: String): Seq[Synopsis] = {
