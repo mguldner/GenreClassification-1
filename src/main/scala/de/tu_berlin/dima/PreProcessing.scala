@@ -34,19 +34,39 @@ object PreProcessing {
     val inputConf = new Configuration()
     inputConf.set("textinputformat.record.delimiter", synopsis_line_delim)
     // read files and transform to appropriate RDDs
+
     //TODO
     val movieSet = extractMovieInfo(genrePath, sc)//, "iso-8859-1"))
     val synopsisSet = extractSynopsisInfo(synopsisPath, sc, inputConf)
 
     // join RDDs in order to keep only movies that have a synopsis
-    val movieSynopsis = joinSets(movieSet, synopsisSet)
+    val movieSynopsis: RDD[MovieSynopsis] = joinSets(movieSet, synopsisSet)
+
+    val movieSets : RDD[(String, Seq[MovieSynopsis], Seq[MovieSynopsis])]=
+      movieSynopsis
+        .groupBy((ms : MovieSynopsis) => ms.genre)
+        .map(msByGenre => {
+        val size = msByGenre._2.size
+        val trainingSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
+        val testSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
+
+        (msByGenre._1, trainingSet, testSet)
+      })
 
     // create training set by keeping TRAINING_FRACTION of movies for each genre
+    var trainingSet : Seq[MovieSynopsis]= null
+    movieSets.foreach(genreSets => {
+      trainingSet.++(genreSets._2)
+    })
 
     // create test set by keeping 1-TRAINING_FRACTION of movies for each genre
+    var testSet : Seq[MovieSynopsis]= null
+    movieSets.foreach(genreSets => {
+      testSet.++(genreSets._3)
+    })
 
     // return (trainingSet, testSet)
-    (movieSynopsis, movieSynopsis)
+    (sc.parallelize(trainingSet), sc.parallelize(testSet) )
   }
 
   def joinSets(movieSet: RDD[Movie], synopsisSet: RDD[Synopsis]): RDD[MovieSynopsis] = {
@@ -57,10 +77,10 @@ object PreProcessing {
         synopsisSet.map(s => ((s.title, s.year), s))
       )
       .map(ms => {
-        val title = ms._1._1
-        val year = ms._1._2
-        MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
-      })
+      val title = ms._1._1
+      val year = ms._1._2
+      MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
+    })
   }
 
   def extractMovieInfo(path: String, sc: SparkContext): RDD[Movie] = {

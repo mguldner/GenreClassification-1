@@ -3,7 +3,9 @@ package de.tu_berlin.dima
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.io.{Text, LongWritable}
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.mllib.linalg.Vector
 
 /**
  * Created by oliver on 13.06.15.
@@ -62,6 +64,10 @@ object PreProcessingMain {
       .joinSets(movieSet, synopsisSet)
       .coalesce(1)
       .saveAsTextFile("file:///tmp/genreclass/join.list")*/
+
+    // Creation of the two datasets (trainingSet and testSet)
+    val sets : (RDD[MovieSynopsis], RDD[MovieSynopsis]) = PreProcessing.preProcess(genrePath, synopsisPath, sc)
+    val tfidf : RDD[Vector] = TFIDF.apply(sets._1)
 
     // run execution
     sc.stop()
