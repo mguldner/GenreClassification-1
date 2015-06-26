@@ -75,6 +75,7 @@ class PreProcessingTest {
   }
 
   //TODO
+  @Ignore
   @Test
   def testParsing(): Unit = {
     val inputConf = new Configuration()
@@ -102,6 +103,7 @@ class PreProcessingTest {
     assert(parsedSynopses.length == 1)
   }
 
+  @Ignore
   @Test
   def testJoin(): Unit = {
     val movieSet = sc.parallelize(

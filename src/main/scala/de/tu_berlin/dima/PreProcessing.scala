@@ -27,21 +27,34 @@ object PreProcessing {
 
 
   // create the training and test set
-  def preProcess(genrePath: String, synopsisPath: String, sc: SparkContext):
-  (RDD[MovieSynopsis], RDD[MovieSynopsis]) = {
-    //TODO read file with different line delim
-
+  def preProcess(genrePath: String,
+                 synopsisPath: String,
+                 sc: SparkContext)
+  : (RDD[MovieSynopsis], RDD[MovieSynopsis]) =
+  {
+    // set up custom line delimiter for synopsis
     val inputConf = new Configuration()
     inputConf.set("textinputformat.record.delimiter", synopsis_line_delim)
+
     // read files and transform to appropriate RDDs
 
-    //TODO
+    // read in files
     val movieSet = extractMovieInfo(genrePath, sc)//, "iso-8859-1"))
     val synopsisSet = extractSynopsisInfo(synopsisPath, sc, inputConf)
 
     // join RDDs in order to keep only movies that have a synopsis
     val movieSynopsis: RDD[MovieSynopsis] = joinSets(movieSet, synopsisSet)
 
+    //TODO Problem with this: RDD is an abstraction for data that sits on different computers
+    //TODO UDFs (user defined functions) like map, reduce, group by get shipped to each computer and can
+    //TODO calculate on the partition that is on that computer independently
+    //TODO You can't pass arguments that you define in this code to the UDFs
+    //TODO and change that argument in the UDF and expect it to be changed overall
+    //TODO E.g. you pass trainingSet: Seq[MovieSnopsis] to the foreach loop
+    //TODO when the code is shipped to each computer in the spark cluster, it ships the current value of
+    //TODO trainingSet which is null(which is also false, you need to initialize it with an empty sequence)
+    //TODO then each computer does sth with each empty sequence of trainingSet
+    //TODO but it doesn't change the global state of the variable trainingSet you defined below
     val movieSets : RDD[(String, Seq[MovieSynopsis], Seq[MovieSynopsis])]=
       movieSynopsis
         .groupBy((ms : MovieSynopsis) => ms.genre)
