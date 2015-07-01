@@ -3,6 +3,8 @@ package de.tu_berlin.dima
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.io.{Text, LongWritable}
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+import org.apache.spark.mllib.classification.NaiveBayesModel
+import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 
 import org.apache.spark.{SparkConf, SparkContext}
@@ -68,7 +70,32 @@ object PreProcessingMain {
 
     // Creation of the two datasets (trainingSet and testSet)
 
+    val sets : (RDD[MovieSynopsis], RDD[MovieSynopsis]) = PreProcessing.preProcess(genrePath, synopsisPath, sc)
+    val trainingSet : RDD[MovieSynopsis] = sets._1
+    val testSet : RDD[MovieSynopsis] = sets._2
+    val useIdfVec : Boolean = true
+
+    val trainingSetChanged : RDD[(String, Iterable[String])] =
+      trainingSet.map(ms => (ms.genre, ms.synopsis.split("\\W+").toIterable))
+
+    var trainingSetFitted : RDD[LabeledPoint] =
+      TFIDF
+        .tfidfVectorParadigm(trainingSetChanged, useIdfVec)
+        .map(v => new LabeledPoint(genreToDouble(v._1), v._2))
+
+    var model : NaiveBayesModel =  Classifier.naiveBayesTrainer(sc, trainingSetFitted)
+    var prediction : RDD[(Double, Double)] = Classifier.naiveBayesPredicter(sc, testSet, model)
     // run execution
     sc.stop()
+  }
+
+  private def genreToDouble(genre : String) : Double = {
+    val num = genre match {
+      case "Action" => 1
+      case "Aventure" => 2
+      case "Drama" => 3
+      case "Thriller" => 4
+    }
+    num
   }
 }

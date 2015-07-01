@@ -2,6 +2,7 @@ package de.tu_berlin.dima
 
 import org.apache.spark.SparkContext
 import org.apache.spark.mllib.classification.NaiveBayes
+import org.apache.spark.mllib.classification.NaiveBayesModel
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
 
@@ -10,17 +11,17 @@ import org.apache.spark.rdd.RDD
  */
 object Classifier {
 
-  def naiveBayesTrainer(sc: SparkContext, trainingSet : RDD[LabeledPoint]/*, testSet : RDD[LabeledPoint]*/) = {
+  def naiveBayesTrainer(sc: SparkContext, trainingSet : RDD[LabeledPoint]) : NaiveBayesModel= {
 
-    val model = NaiveBayes.train(trainingSet, lambda = 1.0, modelType = "multinomial")
+    val model = NaiveBayes.train(trainingSet, lambda = 1.0)
+    //model.save(sc, "/tmp/genreClassification/model")
 
-    //val predictionAndLabel = testSet.map(p => (model.predict(p.features), p.label))
-    //val accuracy = 1.0 * predictionAndLabel.filter(x => x._1 == x._2).count() / testSet.count()
-
-    model.save(sc, "/tmp/genreClassification/model")
+    model
   }
 
-  def naiveBayesPredicter(testSet : RDD) = {
-    
+  def naiveBayesPredicter(sc: SparkContext, testSet : RDD[LabeledPoint], model: NaiveBayesModel) = {
+    //val model = NaiveBayesModel.load(sc, "/tmp/genreClassification/model")
+
+    val predictionAndLabel = testSet.map(p => (model.predict(p.features), p.label))
   }
 }
