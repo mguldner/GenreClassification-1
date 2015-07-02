@@ -41,7 +41,7 @@ object PreProcessing {
       .tfidfVectorParadigm(msForTfidf)
       .map(doc => LabeledPoint(genreToDouble(doc._1._3), doc._2))
   }
-  
+
   // create the training and test set
   def preProcess(genrePath: String,
                  synopsisPath: String,
