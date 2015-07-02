@@ -131,10 +131,10 @@ class PreProcessingTest {
 
     val joinSet = PreProcessing.joinSets(movieSet, synopsisSet).collect()
 
-    assert(joinSet.contains(MovieSynopsis("forrest gump", 1994, "drama", "great movie")))
-    assert(joinSet.contains(MovieSynopsis("forrest gump", 1994, "comedy", "great movie")))
-    assert(joinSet.contains(MovieSynopsis("harry potter", 2001, "fantasy", "also a good movie")))
-    assert(joinSet.contains(MovieSynopsis("harry potter", 2012, "adventure", "good movie")))
+    assert(joinSet.contains(MovieSynopsis("forrest gump", 1994, "drama", Seq("great movie"))))
+    assert(joinSet.contains(MovieSynopsis("forrest gump", 1994, "comedy", Seq("great movie"))))
+    assert(joinSet.contains(MovieSynopsis("harry potter", 2001, "fantasy", Seq("also a good movie"))))
+    assert(joinSet.contains(MovieSynopsis("harry potter", 2012, "adventure", Seq("good movie"))))
     assert(joinSet.length == 4)
   }
 }

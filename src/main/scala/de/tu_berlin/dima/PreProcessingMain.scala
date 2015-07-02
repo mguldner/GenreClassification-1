@@ -32,45 +32,25 @@ object PreProcessingMain {
     val conf = new SparkConf()
       .setAppName("Pre Processing")
       .setMaster("local[4]")
-      .set("spark.driver.allowMultipleContexts", "true")
+      //.set("spark.driver.allowMultipleContexts", "true")
     val sc = new SparkContext(conf)
 
 
-    val synopsi = sc.
-      newAPIHadoopFile(
-        synopsisPath,
-        classOf[TextInputFormat],
-        classOf[LongWritable],
-        classOf[Text],
-        inConf
-    )
-
-    synopsi
-      .map(t => t._2.toString)
-      .coalesce(1)
-      .saveAsTextFile("test.txt")
-
-    // create two datasets of MovieSynopsis (as (trainingSet, testSet))
-    /*val movieSet = PreProcessing.extractMovieInfo(sc.textFile(genrePath))//, "iso-8859-1"))
-    movieSet
-      .coalesce(1)
-      .saveAsTextFile("file:///tmp/genreclass/genres.list")
-
-    val synopsisSet = PreProcessing.extractSynopsisInfo(
-      sc.textFile(synopsisPath)//(new CustomInputFormat("iso-8859-1", PreProcessing.synopsis_line_delim), synopsisPath)
-    )
-    synopsisSet
-      .coalesce(1)
-      .saveAsTextFile("file:///tmp/genreclass/plot.list")
-
-    PreProcessing
-      .joinSets(movieSet, synopsisSet)
-      .coalesce(1)
-      .saveAsTextFile("file:///tmp/genreclass/join.list")*/
-
     // Creation of the two datasets (trainingSet and testSet)
 
-    val sets : (RDD[MovieSynopsis], RDD[MovieSynopsis]) = PreProcessing.preProcess(genrePath, synopsisPath, sc)
+    val sets = PreProcessing.preProcess(genrePath, synopsisPath, sc)
+    val training = sets._1
+    val test = sets._2
+    training
+      .map(m => (m.title, m.year, m.genre))
+      .coalesce(1)
+      .saveAsTextFile("file:///home/oliver/Documents/datasets/genre/out/trainingSet")
+    test
+      .map(m => (m.title, m.year, m.genre))
+      .coalesce(1)
+      .saveAsTextFile("file:///home/oliver/Documents/datasets/genre/out/testSet")
+
+    /*val sets : (RDD[MovieSynopsis], RDD[MovieSynopsis]) = PreProcessing.preProcess(genrePath, synopsisPath, sc)
     val trainingSet : RDD[MovieSynopsis] = sets._1
     val testSet : RDD[MovieSynopsis] = sets._2
     val useIdfVec : Boolean = true
@@ -84,18 +64,8 @@ object PreProcessingMain {
         .map(v => new LabeledPoint(genreToDouble(v._1), v._2))
 
     var model : NaiveBayesModel =  Classifier.naiveBayesTrainer(sc, trainingSetFitted)
-    var prediction : RDD[(Double, Double)] = Classifier.naiveBayesPredicter(sc, testSet, model)
+    var prediction : RDD[(Double, Double)] = Classifier.naiveBayesPredicter(sc, testSet, model)*/
     // run execution
     sc.stop()
-  }
-
-  private def genreToDouble(genre : String) : Double = {
-    val num = genre match {
-      case "Action" => 1
-      case "Aventure" => 2
-      case "Drama" => 3
-      case "Thriller" => 4
-    }
-    num
   }
 }

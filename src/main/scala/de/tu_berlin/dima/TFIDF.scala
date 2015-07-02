@@ -17,7 +17,7 @@ class TFIDF extends Serializable {
 
   def tfidfVectorParadigm[D <: Iterable[String], I <: Product](documents: RDD[(I, D)],
                                                                useIdfVec: Boolean = true,
-                                                               numFts: Int = Math.pow(2,10).toInt)
+                                                               numFts: Int = Math.pow(2,20).toInt)
   : RDD[(I, Vector)] =
   {
 
@@ -42,9 +42,7 @@ class TFIDF extends Serializable {
     //val numDocs = documents.context.accumulator(0, "numDocs")
 
     // need to create broadcast variable that encodes the number of docs
-    val numDocs = documents
-      .map(t => 1)
-      .reduce((x,y) => x+y)
+    val numDocs = documents.count()
     val numDocsBc = documents.context.broadcast(numDocs)
 
     // compute Term frequencies

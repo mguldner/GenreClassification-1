@@ -3,8 +3,11 @@ package de.tu_berlin.dima
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.io.{Text, LongWritable}
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat
+import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.{SparkContext}
 import org.apache.spark.rdd.RDD
+
+import scala.util.Random
 
 /**
  * Created by oliver on 13.06.15.
@@ -23,9 +26,22 @@ object PreProcessing {
     "PL:\\s*(.+)".r // 1.one line of the synopsis text
 
   // fraction of movies that will be in the training set
-  val TRAINING_FRACTION = 0.7f
+  val TRAINING_FRACTION = 0.8f
 
+  // transform a RDD of MovieSynopis to RDD of Labeled Point
+  def tfidfTransformation(movies: RDD[MovieSynopsis]): RDD[LabeledPoint] = {
 
+    // transform documents to necessary tfidf input
+    val msForTfidf = movies
+      .map(m => ((m.title, m.year, m.genre), m.synopsis))
+
+    // apply tfidf transformation
+    val tfidf = new TFIDF()
+    tfidf
+      .tfidfVectorParadigm(msForTfidf)
+      .map(doc => LabeledPoint(genreToDouble(doc._1._3), doc._2))
+  }
+  
   // create the training and test set
   def preProcess(genrePath: String,
                  synopsisPath: String,
@@ -45,41 +61,26 @@ object PreProcessing {
     // join RDDs in order to keep only movies that have a synopsis
     val movieSynopsis: RDD[MovieSynopsis] = joinSets(movieSet, synopsisSet)
 
-    //TODO Problem with this: RDD is an abstraction for data that sits on different computers
-    //TODO UDFs (user defined functions) like map, reduce, group by get shipped to each computer and can
-    //TODO calculate on the partition that is on that computer independently
-    //TODO You can't pass arguments that you define in this code to the UDFs
-    //TODO and change that argument in the UDF and expect it to be changed overall
-    //TODO E.g. you pass trainingSet: Seq[MovieSnopsis] to the foreach loop
-    //TODO when the code is shipped to each computer in the spark cluster, it ships the current value of
-    //TODO trainingSet which is null(which is also false, you need to initialize it with an empty sequence)
-    //TODO then each computer does sth with each empty sequence of trainingSet
-    //TODO but it doesn't change the global state of the variable trainingSet you defined below
-    val movieSets : RDD[(String, Seq[MovieSynopsis], Seq[MovieSynopsis])]=
-      movieSynopsis
+    // split into training and test set
+    val movieSets = movieSynopsis
         .groupBy((ms : MovieSynopsis) => ms.genre)
-        .map(msByGenre => {
-        val size = msByGenre._2.size
-        val trainingSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.take((size * TRAINING_FRACTION).toInt)
-        val testSet : Seq[MovieSynopsis] = msByGenre._2.toSeq.takeRight((size * (1 - TRAINING_FRACTION)).toInt)
+        .flatMap(msByGenre => {
+          msByGenre._2 // get synopses for genre
+            .map(ms => {
+              val p = Random.nextDouble()
+              (ms, p <= TRAINING_FRACTION) // if true --> part of training set, else part of test set
+            })
+        })
 
-        (msByGenre._1, trainingSet, testSet)
-      })
+    val trainingSet = movieSets
+      .filter(mb => mb._2) // keep movie if part of training set
+      .map(mb => mb._1)
 
-    // create training set by keeping TRAINING_FRACTION of movies for each genre
-    var trainingSet : Seq[MovieSynopsis]= null
-    movieSets.foreach(genreSets => {
-      trainingSet.++(genreSets._2)
-    })
+    val testSet = movieSets
+      .filter(mb => !mb._2) // keep movie if part of test set
+      .map(mb => mb._1)
 
-    // create test set by keeping 1-TRAINING_FRACTION of movies for each genre
-    var testSet : Seq[MovieSynopsis]= null
-    movieSets.foreach(genreSets => {
-      testSet.++(genreSets._3)
-    })
-
-    // return (trainingSet, testSet)
-    (sc.parallelize(trainingSet), sc.parallelize(testSet) )
+    (trainingSet, testSet)
   }
 
   def joinSets(movieSet: RDD[Movie], synopsisSet: RDD[Synopsis]): RDD[MovieSynopsis] = {
@@ -90,10 +91,10 @@ object PreProcessing {
         synopsisSet.map(s => ((s.title, s.year), s))
       )
       .map(ms => {
-      val title = ms._1._1
-      val year = ms._1._2
-      MovieSynopsis(title, year, ms._2._1.genre, ms._2._2.synopsis)
-    })
+        val title = ms._1._1
+        val year = ms._1._2
+        MovieSynopsis(title, year, ms._2._1.genre, processSynopsis(ms._2._2.synopsis))
+      })
   }
 
   def extractMovieInfo(path: String, sc: SparkContext): RDD[Movie] = {
@@ -131,5 +132,81 @@ object PreProcessing {
       .foreach(mtch => synopsisText += " " + mtch.group(1))
 
     Seq(new Synopsis(titleYear._1.toLowerCase.trim, titleYear._2.toInt, synopsisText.toLowerCase.trim))
+  }
+
+  def genreToDouble(genre : String) : Double = {
+    val num = genre match {
+      case "short" => 1
+      case "drama" => 2
+      case "comedy" => 3
+      case "documentary" => 4
+      case "adult" => 5
+      case "action" => 6
+      case "romance" => 7
+      case "thriller" => 8
+      case "animation" => 9
+      case "family" => 10
+      case "horror" => 11
+      case "music" => 12
+      case "crime" => 13
+      case "adventure" => 14
+      case "fantasy" => 15
+      case "sci-fi" => 16
+      case "mystery" => 17
+      case "biography" => 18
+      case "history" => 19
+      case "sport" => 20
+      case "musical" => 21
+      case "war" => 22
+      case "western" => 23
+      case "film-noir" => 24
+      /*case "reality-tv" => 25
+      case "news" => 26
+      case "talk-show" => 27
+      case "game-show" => 28*/
+
+      case other => throw new RuntimeException("Wrong genre: " + other)
+    }
+    num
+  }
+
+  def doubleToGenre(dgenre: Double): String = {
+    val str = dgenre match {
+      case  1 => "short"
+      case  2 => "drama"
+      case  3 => "comedy"
+      case  4 => "documentary"
+      case  5 => "adult"
+      case  6 => "action"
+      case  7 => "romance"
+      case  8 => "thriller"
+      case  9 => "animation"
+      case  10 => "family"
+      case  11 => "horror"
+      case  12 => "music"
+      case  13 => "crime"
+      case  14 => "adventure"
+      case  15 => "fantasy"
+      case  16 => "sci-fi"
+      case  17 => "mystery"
+      case  18 => "biography"
+      case  19 => "history"
+      case  20 => "sport"
+      case  21 => "musical"
+      case  22 => "war"
+      case  23 => "western"
+      case  24 => "film-noir"
+      /*case "reality-tv" => 25
+      case "news" => 26
+      case "talk-show" => 27
+      case "game-show" => 28*/
+      case other => throw new RuntimeException("Wrong genre: " + other)
+    }
+    str
+  }
+
+  // process a movie synopsis represented by a string to a synopsis represented by its words
+  def processSynopsis(syn: String): Seq[String] = {
+    syn.split("\\W+")
   }
 }
