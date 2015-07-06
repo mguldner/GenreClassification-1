@@ -11,17 +11,17 @@ import org.apache.spark.rdd.RDD
  */
 object Classifier {
 
-  def naiveBayesTrainer(sc: SparkContext, trainingSet : RDD[LabeledPoint]) : NaiveBayesModel= {
+  def naiveBayesTrainer(sc: SparkContext, trainingSet : RDD[LabeledPoint], lambda: Double) = {
 
-    val model = NaiveBayes.train(trainingSet, lambda = 1.0)
-    //model.save(sc, "/tmp/genreClassification/model")
-
-    model
+    val model = NaiveBayes.train(trainingSet, lambda = lambda)
+    model.save(sc, "file:///tmp/genreClassification/model")
   }
 
-  def naiveBayesPredicter(sc: SparkContext, testSet : RDD[LabeledPoint], model: NaiveBayesModel) = {
-    //val model = NaiveBayesModel.load(sc, "/tmp/genreClassification/model")
+  def naiveBayesPredicter(sc: SparkContext, testSet : RDD[LabeledPoint]) : RDD[(Double, Double)] = {
+    val model = NaiveBayesModel.load(sc, "file:///tmp/genreClassification/model")
 
-    val predictionAndLabel = testSet.map(p => (model.predict(p.features), p.label))
+    val predictionAndLabel : RDD[(Double, Double)] = testSet.map(p => (model.predict(p.features), p.label ))
+
+    predictionAndLabel
   }
 }
