@@ -30,7 +30,7 @@ object BayesClassifierAnalysis {
     try {
       attrs = ap.parseArgs(args).getAttrs.toMap
     } catch {
-      case e: Exception => throw new RuntimeException("usage: --movies --out --analyis: " + args.toSeq.toString)
+      case e: Exception => throw new RuntimeException("usage: --movies --out --analysis --lambda --genres: " + args.toSeq.toString)
     }
     println(attrs.toString)
     val moviesPath = attrs.get("movies").get.toString
@@ -55,6 +55,8 @@ object BayesClassifierAnalysis {
       .distinct()
       .collect()
     println("Distinct Genres: " + genres.toString)
+
+    //movies.cache()
 
     // pre process movie synopses
     val splits = PreProcessing.preProcess(movies)

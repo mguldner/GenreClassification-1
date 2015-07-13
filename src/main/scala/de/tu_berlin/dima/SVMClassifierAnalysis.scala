@@ -12,7 +12,7 @@ import net.sourceforge.argparse4j.ArgumentParsers
 
 object SVMClassifierAnalysis {
 
-  // svm params
+  // default svm params
   val REG = 0.0
   val NUM_IT = 10
   val STEP_SIZE = 1d
@@ -28,11 +28,12 @@ object SVMClassifierAnalysis {
     ap.addArgument("--out").required(true)
     ap.addArgument("--analysis").required(true)
     ap.addArgument("--param").required(false)
+    ap.addArgument("--genres").required(true)
     var attrs: Map[String, AnyRef] = null
     try {
       attrs = ap.parseArgs(args).getAttrs.toMap
     } catch {
-      case e: Exception => throw new RuntimeException("usage: --movies --out --analyis: " + args.toSeq.toString)
+      case e: Exception => throw new RuntimeException("usage: --movies --out --analysis --param --genres: " + args.toSeq.toString)
     }
     println(attrs.toString)
     val moviesPath = attrs.get("movies").get.toString
@@ -42,7 +43,7 @@ object SVMClassifierAnalysis {
       case null => -1
       case n => n.toString.toInt
     }
-    var genresToFilter = attrs.get("genres").get.toString.split(",")
+    val genresToFilter = attrs.get("genres").get.toString.split(",")
     println("Genres to Filter: " + genresToFilter.toSeq.toString)
     println(param)
 
@@ -58,6 +59,8 @@ object SVMClassifierAnalysis {
       .distinct()
       .collect()
     println("Distinct Genres: " + genres.toString)
+
+    //movies.cache()
 
     // pre process movie synopses to get tfidf representation of movie synopses
     val splits = PreProcessing.preProcess(movies)
@@ -88,7 +91,7 @@ object SVMClassifierAnalysis {
 
       val res = paramSearch(tr, ts, genres, createParamList(param), p)
 
-      res.foreach(r => println("Reg"+","+param+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
+      res.foreach(r => println(ps+","+param+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
       /*sc.parallelize(res
         .map(r => ps+","+r.param+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
         .saveAsTextFile(outPath)*/
@@ -96,7 +99,8 @@ object SVMClassifierAnalysis {
       val res = paramSearch(tr, ts, genres, List(REG), SVMParam.REG)
       require(res.size == 1, "Multilabel only runs SVM once on each genre: " + res.toString())
 
-      res.foreach(r => println("Reg"+","+REG+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
+      res.foreach(r => println("Reg"+","+REG+","+"NumIts"+NUM_IT+","
+        +r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
       /*sc.parallelize(res
         .map(r => getParamString(SVMParam.REG)+","+REG+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
         .saveAsTextFile(outPath)*/
@@ -110,6 +114,8 @@ object SVMClassifierAnalysis {
       case SVMParam.REG => "Regularization"
       case SVMParam.NUM_IT => "Number of Iterations"
       case SVMParam.STEP_SIZE => "Step Size"
+      case other => throw new RuntimeException("Param needs to be one of: "
+        + SVMParam.REG + "," + SVMParam.NUM_IT + "," + SVMParam.STEP_SIZE)
     }
   }
 
@@ -118,6 +124,8 @@ object SVMClassifierAnalysis {
       case SVMParam.REG => List(0.0, 0.2, 0.6, 0.8)
       case SVMParam.NUM_IT => List(2,3,4,5,6,7,8,9,10)
       case SVMParam.STEP_SIZE => List(1, 2, 3, 4)
+      case other => throw new RuntimeException("Param needs to be one of: "
+        + SVMParam.REG + "," + SVMParam.NUM_IT + "," + SVMParam.STEP_SIZE)
     }
   }
 
