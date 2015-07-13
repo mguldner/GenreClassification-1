@@ -90,34 +90,38 @@
       <groupId>org.scalanlp</groupId>
       <artifactId>breeze-viz_2.10</artifactId>
       <version>0.11.2</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>com.github.wookietreiber</groupId>
       <artifactId>scala-chart_2.10</artifactId>
       <version>0.4.2</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-library</artifactId>
       <version>${scala.complete.version}</version>
-      <!--<scope>provided</scope>-->
+      <scope>provided</scope>
     </dependency>
     <!-- Make sure this version is harmonized -->
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scalap</artifactId>
       <version>${scala.complete.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.scala-lang</groupId>
       <artifactId>scala-compiler</artifactId>
       <version>${scala.complete.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-core_${scala.minor.version}</artifactId>
       <version>${spark.version}</version>
-      <!--<scope>provided</scope>-->
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.scalatest</groupId>
@@ -136,6 +140,19 @@
       <groupId>org.apache.spark</groupId>
       <artifactId>spark-mllib_2.10</artifactId>
       <version>${spark.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <!-- language processing -->
+    <dependency>
+      <groupId>org.scalanlp</groupId>
+      <artifactId>chalk</artifactId>
+      <version>1.3.0</version>
+    </dependency>
+    <!-- command line parser -->
+    <dependency>
+      <groupId>net.sourceforge.argparse4j</groupId>
+      <artifactId>argparse4j</artifactId>
+      <version>0.6.0</version>
     </dependency>
   </dependencies>
 </project>

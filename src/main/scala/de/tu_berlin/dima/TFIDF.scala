@@ -24,7 +24,7 @@ class TFIDF extends Serializable {
     val tf = new StringTF(numFts)
       .transform(documents)
 
-    tf.cache()
+    //tf.cache()
     val idf = new StringIDF(useIdfVec)
       .fit(tf.map(d => d._2)) // only features necessary for IDF calculation
 

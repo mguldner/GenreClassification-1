@@ -7,12 +7,12 @@ import org.junit.{Ignore, After, Before, Test}
 
 import scala.reflect.io.File
 
-/**
- * Created by oliver on 15.06.15.
- */
 class PreProcessingTest {
 
-  val conf = new SparkConf().setAppName("PreProcessingTest").setMaster("local[4]")
+  val conf = new SparkConf()
+    .setAppName("PreProcessingTest")
+    .setMaster("local[4]")
+    .set("spark.driver.allowMultipleContexts", "true")
   val sc = new SparkContext(conf)
   val genrePath = "genres.list"
   val synopsisPath = "plot.list"
@@ -136,5 +136,14 @@ class PreProcessingTest {
     assert(joinSet.contains(MovieSynopsis("harry potter", 2001, "fantasy", Seq("also a good movie"))))
     assert(joinSet.contains(MovieSynopsis("harry potter", 2012, "adventure", Seq("good movie"))))
     assert(joinSet.length == 4)
+  }
+
+  @Test
+  def testSynopsisParsing(): Unit = {
+    val s = "Forrest Gump is a simple man with a low I.Q. but good intentions. He is\nrunning through childhood with his best and only friend Jenny. His 'mama'\nteaches him the ways of life and leaves him to choose his destiny. Forrest\njoins the army for service in Vietnam, finding new friends called Dan and\nBubba, he wins medals, creates a famous shrimp fishing fleet, inspires\npeople to jog, starts a ping-pong craze, create the smiley, write bumper\nstickers and songs, donating to people and meeting the president several\ntimes. However, this is all irrelevant to Forrest who can only think of his\nchildhood sweetheart Jenny Curran. Who has messed up her life. Although in\nthe end all he wants to prove is that anyone can love anyone."
+
+    val tokens = PreProcessing.processSynopsis(s.toLowerCase)
+
+    print(tokens.toString())
   }
 }

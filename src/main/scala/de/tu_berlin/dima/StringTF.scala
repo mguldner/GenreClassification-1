@@ -47,8 +47,8 @@ class StringTF(val numFeatures: Int) extends Serializable
   private def indexOf(term: String): Int = {
 
     //nonNegativeHash(term)
-    //nonNegativeMod(term.##, numFeatures)
-    Math.abs(MurmurHash3.stringHash(term)) % numFeatures
+    nonNegativeMod(term.##, numFeatures)
+    //Math.abs(MurmurHash3.stringHash(term)) % numFeatures
   }
 
   /**
