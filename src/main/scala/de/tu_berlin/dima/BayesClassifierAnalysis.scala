@@ -41,7 +41,7 @@ object BayesClassifierAnalysis {
       case n => n.toString.toDouble
     }
     var genresToFilter = attrs.get("genres").get.toString.split(",")
-    println(genresToFilter.toSeq.toString)
+    println("Genres to Filter: " + genresToFilter.toSeq.toString)
 
     // set up exectution
     val conf = new SparkConf().setAppName("Bayes Classifier")
@@ -54,7 +54,7 @@ object BayesClassifierAnalysis {
       .map(_.genre)
       .distinct()
       .collect()
-    println("genres: " + genres.toString)
+    println("Distinct Genres: " + genres.toString)
 
     // pre process movie synopses
     val splits = PreProcessing.preProcess(movies)

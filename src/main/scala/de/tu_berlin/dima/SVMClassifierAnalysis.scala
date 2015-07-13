@@ -42,6 +42,8 @@ object SVMClassifierAnalysis {
       case null => -1
       case n => n.toString.toInt
     }
+    var genresToFilter = attrs.get("genres").get.toString.split(",")
+    println("Genres to Filter: " + genresToFilter.toSeq.toString)
     println(param)
 
     // set up exectution
@@ -49,12 +51,13 @@ object SVMClassifierAnalysis {
     val sc = new SparkContext(conf)
 
     // get the genres
-    val movies = PreProcessing.transformToMovieSynopsis(sc.textFile(moviesPath))
-    val genres = movies.map(ms => ms.genre)
+    val movies = PreProcessing
+      .filterGenres(PreProcessing.transformToMovieSynopsis(sc.textFile(moviesPath)), genresToFilter)
+    val genres = movies
+      .map(_.genre)
       .distinct()
       .collect()
-      .toSeq
-    println("genres: " + genres.toString)
+    println("Distinct Genres: " + genres.toString)
 
     // pre process movie synopses to get tfidf representation of movie synopses
     val splits = PreProcessing.preProcess(movies)
@@ -74,9 +77,10 @@ object SVMClassifierAnalysis {
         .setStepSize(STEP_SIZE)
       val res = oneVAllPerGenre(tr, ts, genres, svm)
 
-      sc.parallelize(res
+      res.foreach(b => println(b.genre+","+b.auROC+","+b.auPR))
+      /*sc.parallelize(res
         .map(b => b.genre+","+b.auROC+","+b.auPR))
-        .saveAsTextFile(outPath)
+        .saveAsTextFile(outPath)*/
     } else if(analysisType.equals("paramsearch")) {
       require(param >= 0, "Param needs to be set: " + param)
       val p = SVMParam(param)
@@ -84,16 +88,18 @@ object SVMClassifierAnalysis {
 
       val res = paramSearch(tr, ts, genres, createParamList(param), p)
 
-      sc.parallelize(res
+      res.foreach(r => println("Reg"+","+param+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
+      /*sc.parallelize(res
         .map(r => ps+","+r.param+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
-        .saveAsTextFile(outPath)
+        .saveAsTextFile(outPath)*/
     } else if(analysisType.equals("multilabel")) {
       val res = paramSearch(tr, ts, genres, List(REG), SVMParam.REG)
       require(res.size == 1, "Multilabel only runs SVM once on each genre: " + res.toString())
 
-      sc.parallelize(res
+      res.foreach(r => println("Reg"+","+REG+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
+      /*sc.parallelize(res
         .map(r => getParamString(SVMParam.REG)+","+REG+","+r.precision+","+r.recall+","+r.accuracy+","+r.hammingLoss+","+r.f1Msr))
-        .saveAsTextFile(outPath)
+        .saveAsTextFile(outPath)*/
     }
 
     sc.stop()
